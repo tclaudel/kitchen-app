@@ -58,5 +58,5 @@ jobs:
         run: |
           ssh -i ~/.ssh/vps_key tclaudel@145.239.64.235 \
             "mkdir -p /home/tclaudel/kitchen-app/data /home/tclaudel/kitchen-app/uploads && \
-             printf '%s\n' '$OPENCODE_SERVER_PASSWORD' > /home/tclaudel/kitchen-app/.env && \
+             printf 'OPENCODE_SERVER_PASSWORD=%s\n' '$OPENCODE_SERVER_PASSWORD' > /home/tclaudel/kitchen-app/.env && \
              cd /home/tclaudel/kitchen-app && docker compose up -d --build"
