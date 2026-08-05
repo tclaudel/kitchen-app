@@ -1,0 +1,5 @@
+[allowlist]
+description = "Generated BMAD file manifest contains documentation paths that trigger generic API-key heuristics."
+paths = [
+  '''^_bmad/_config/files-manifest\.csv$'''
+]
