@@ -66,11 +66,9 @@ jobs:
           fetch-depth: 0
 
       - name: Scan repository for secrets
-        uses: gitleaks/gitleaks-action@v2.3.9
+        uses: docker://zricethezav/gitleaks:latest
         with:
-          config: .gitleaks.toml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          args: detect --source . --config .gitleaks.toml --redact --verbose
 
   container-scan:
     name: Container scan
