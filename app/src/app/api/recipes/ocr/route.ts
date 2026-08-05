@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 
   let imageBytes: Buffer<ArrayBufferLike> = Buffer.from(await image.arrayBuffer());
   let imageMime = image.type;
-  if (isHeic || imageBytes.length > 2_000_000) {
+  if (isHeic || imageBytes.length > 1_000_000) {
     try {
       imageBytes = await sharp(imageBytes).resize({ width: 2000, withoutEnlargement: true }).jpeg({ quality: 82 }).toBuffer();
       imageMime = "image/jpeg";
