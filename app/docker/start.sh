@@ -3,6 +3,8 @@ set -eu
 
 : "${OPENCODE_SERVER_PASSWORD:?OPENCODE_SERVER_PASSWORD must be set}"
 
+node_modules/.bin/prisma migrate deploy
+
 opencode serve \
   --hostname "${OPENCODE_SERVER_HOSTNAME:-127.0.0.1}" \
   --port "${OPENCODE_SERVER_PORT:-4096}" \
