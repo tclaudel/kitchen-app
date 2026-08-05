@@ -19,7 +19,7 @@ export default function ImportRecipePage() {
 
   function selectFile(selectedFile: File | null) {
     if (!selectedFile) return;
-    const isImage = selectedFile.type.startsWith("image/") || /\.(heic|heif)$/i.test(selectedFile.name);
+    const isImage = selectedFile.type.startsWith("image/") || /\.(png|jpe?g|webp|gif|heic|heif)$/i.test(selectedFile.name);
     if (!isImage) {
       setError("Choisissez une image au format JPG, PNG ou HEIC.");
       return;
