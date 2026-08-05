@@ -20,6 +20,9 @@ ENV OPENCODE_SERVER_PORT=4096
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl curl ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN curl -fsSL https://opencode.ai/install | bash
 
+# The runtime only needs Node to serve the standalone app, not npm's bundled tooling.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
