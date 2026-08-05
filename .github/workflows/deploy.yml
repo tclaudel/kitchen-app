@@ -55,8 +55,9 @@ jobs:
       - name: Build and restart
         env:
           OPENCODE_SERVER_PASSWORD: ${{ secrets.OPENCODE_SERVER_PASSWORD }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
           ssh -i ~/.ssh/vps_key tclaudel@145.239.64.235 \
             "mkdir -p /home/tclaudel/kitchen-app/data /home/tclaudel/kitchen-app/uploads && \
-             printf 'OPENCODE_SERVER_PASSWORD=%s\n' '$OPENCODE_SERVER_PASSWORD' > /home/tclaudel/kitchen-app/.env && \
-             cd /home/tclaudel/kitchen-app && docker compose down --remove-orphans && docker compose up -d --build"
+             printf 'OPENCODE_SERVER_PASSWORD=%s\nOPENCODE_API_KEY=%s\n' '$OPENCODE_SERVER_PASSWORD' '$OPENCODE_API_KEY' > /home/tclaudel/kitchen-app/.env && \
+             cd /home/tclaudel/kitchen-app && docker compose down --remove-orphans && docker compose build && docker compose run --rm --no-deps kitchen-app node_modules/.bin/prisma migrate deploy && docker compose up -d"
