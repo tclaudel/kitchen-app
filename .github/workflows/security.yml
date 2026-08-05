@@ -56,21 +56,6 @@ jobs:
       - name: Analyze with CodeQL
         uses: github/codeql-action/analyze@v3.28.17
 
-  secret-scan:
-    name: Secret scan
-    if: ${{ false }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4.2.2
-        with:
-          fetch-depth: 0
-
-      - name: Scan repository for secrets
-        uses: docker://zricethezav/gitleaks:latest
-        with:
-          args: detect --source . --config .gitleaks.toml --redact --verbose
-
   container-scan:
     name: Container scan
     runs-on: ubuntu-latest
