@@ -22,63 +22,41 @@ jobs:
       security-events: write
       packages: read
 
-  publish:
-    name: Publish container
+  deploy:
+    name: Deploy to VPS
     needs: security
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    environment: production
     steps:
       - name: Check out source
         uses: actions/checkout@v4.2.2
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3.4.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.10.0
-
-      - name: Extract image metadata
-        id: meta
-        uses: docker/metadata-action@v5.7.0
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=sha
-            type=raw,value=latest
-
-      - name: Build and publish image
-        uses: docker/build-push-action@v6.15.0
-        with:
-          context: app
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  deploy:
-    name: Deploy production image
-    needs: publish
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - name: Require deployment target configuration
+      - name: Configure SSH
         env:
-          DEPLOY_COMMAND: ${{ secrets.DEPLOY_COMMAND }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
-          if [ -z "$DEPLOY_COMMAND" ]; then
-            echo "Configure the production environment secret DEPLOY_COMMAND with the command that deploys the GHCR image."
-            exit 1
-          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/vps_key
+          chmod 600 ~/.ssh/vps_key
+          ssh-keyscan -H 145.239.64.235 >> ~/.ssh/known_hosts
 
-      - name: Deploy image
+      - name: Sync project
+        run: |
+          rsync -az --delete \
+            --exclude='.git/' \
+            --exclude='node_modules/' \
+            --exclude='.next/' \
+            --exclude='.env' \
+            --exclude='data/' \
+            --exclude='uploads/' \
+            -e 'ssh -i ~/.ssh/vps_key' \
+            ./ tclaudel@145.239.64.235:/home/tclaudel/kitchen-app/
+
+      - name: Build and restart
         env:
-          DEPLOY_COMMAND: ${{ secrets.DEPLOY_COMMAND }}
-          IMAGE: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}
-        run: eval "$DEPLOY_COMMAND"
+          OPENCODE_SERVER_PASSWORD: ${{ secrets.OPENCODE_SERVER_PASSWORD }}
+        run: |
+          ssh -i ~/.ssh/vps_key tclaudel@145.239.64.235 \
+            "mkdir -p /home/tclaudel/kitchen-app/data /home/tclaudel/kitchen-app/uploads && \
+             printf '%s\n' '$OPENCODE_SERVER_PASSWORD' > /home/tclaudel/kitchen-app/.env && \
+             cd /home/tclaudel/kitchen-app && docker compose up -d --build"
