@@ -19,6 +19,7 @@ model Recipe {
   imagePath         String?
   ingredients       String
   steps             String
+  cooklang          String?
   tags              String?
   prepTimeMinutes   Int?
   cookTimeMinutes   Int?

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { deleteRecipe } from "./actions";
 
 function parseList(value: string) {
   try {
@@ -71,6 +72,17 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
               </ol>
             </section>
           </div>
+
+          <div className="border-t border-[#eeeae2] px-6 py-5 sm:px-10">
+            <form action={deleteRecipe} onSubmit={(event) => { if (!window.confirm("Supprimer cette recette ?")) event.preventDefault(); }}>
+              <input type="hidden" name="id" value={recipe.id} />
+              <button type="submit" className="rounded-full border border-[#e2b8aa] px-4 py-2 text-sm font-medium text-[#a44f39] transition hover:bg-[#fff0eb]">Supprimer la recette</button>
+            </form>
+          </div>
+          {recipe.cooklang && <details className="border-t border-[#eeeae2] px-6 py-5 sm:px-10">
+            <summary className="cursor-pointer text-sm font-semibold text-[#526157]">Voir le format Cooklang</summary>
+            <pre className="mt-4 overflow-x-auto rounded-xl bg-[#27352d] p-4 text-sm leading-6 text-white">{recipe.cooklang}</pre>
+          </details>}
         </div>
       </article>
     </main>
