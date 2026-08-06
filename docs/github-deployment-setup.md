@@ -2,6 +2,8 @@
 
 The deployment workflow publishes the application image to GitHub Container Registry (GHCR), then triggers Coolify only after all security checks pass.
 
+Coolify is currently hosted at `http://145.239.64.235:8000`. This is the dashboard URL, not the deployment webhook URL.
+
 ## 1. Create the `production` environment
 
 In GitHub:
@@ -15,13 +17,15 @@ In GitHub:
 
 ### `COOLIFY_WEBHOOK_URL`
 
-Create a deploy webhook in the Coolify application and copy its full URL. Store that URL as `COOLIFY_WEBHOOK_URL`.
+Open `http://145.239.64.235:8000`, select the application that deploys this project, create or copy its deploy webhook, and store the full webhook URL as `COOLIFY_WEBHOOK_URL`. Do not use the dashboard URL itself as the secret value.
 
 ### `COOLIFY_TOKEN`
 
 If the Coolify webhook requires bearer authentication, store its token as `COOLIFY_TOKEN`. If the webhook is already authenticated by its URL and does not require a bearer token, the workflow should omit the authorization header.
 
 Do not commit either value to the repository.
+
+Because this Coolify instance uses HTTP, avoid exposing the dashboard or webhook publicly without network controls. Prefer HTTPS with a reverse proxy before using it from production CI.
 
 ## 3. Allow GHCR access in Coolify
 

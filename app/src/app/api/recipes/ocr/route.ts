@@ -8,6 +8,9 @@ type ExtractedRecipe = {
   title: string;
   ingredients: string[];
   steps: string[];
+  prepTimeMinutes?: number | string | null;
+  cookTimeMinutes?: number | string | null;
+  servings?: number | null;
 };
 
 export async function POST(request: Request) {
@@ -17,8 +20,8 @@ export async function POST(request: Request) {
   const image = formData.get("image");
 
   const isHeic = image instanceof File && (/\.(heic|heif)$/i.test(image.name) || image.type === "image/heic" || image.type === "image/heif");
-  if (!(image instanceof File) || image.size > 10_000_000 || (!image.type.startsWith("image/") && !isHeic)) {
-    return errorResponse("Veuillez sélectionner une image valide de moins de 10 Mo.", 400);
+  if (!(image instanceof File) || image.size > 25_000_000 || (!image.type.startsWith("image/") && !isHeic)) {
+    return errorResponse("Veuillez sélectionner une image valide de moins de 25 Mo.", 400);
   }
 
   const serverUrl = process.env.OPENCODE_SERVER_URL ?? "http://127.0.0.1:4096";
@@ -68,7 +71,7 @@ export async function POST(request: Request) {
     body: JSON.stringify({
       model: { providerID, modelID },
       parts: [
-        { type: "text", text: "Extract this recipe. Return only valid JSON with title (string), ingredients (array of strings), and steps (array of strings). Preserve the image faithfully and never invent missing information." },
+         { type: "text", text: "Extract this recipe. Return only valid JSON with title (string), ingredients (array of strings), steps (array of strings), prepTimeMinutes (integer minutes or null), cookTimeMinutes (integer minutes or null), and servings (integer or null). Read preparation and cooking durations if visible. Preserve the image faithfully and never invent missing information." },
         { type: "file", mime: imageMime, url: `data:${imageMime};base64,${base64}`, filename: image.name.replace(/\.heic$/i, ".jpg") },
       ],
     }),

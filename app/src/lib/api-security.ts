@@ -48,7 +48,25 @@ export function safeRecipe(value: unknown) {
   const title = text(recipe.title, 200);
   const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients.map((item) => text(item, 500)).filter(Boolean).slice(0, 100) : [];
   const steps = Array.isArray(recipe.steps) ? recipe.steps.map((item) => text(item, 2_000)).filter(Boolean).slice(0, 100) : [];
-  return title && ingredients.length && steps.length ? { title, ingredients, steps } : null;
+  const optionalMinutes = (item: unknown) => {
+    if (typeof item === "number") return Number.isInteger(item) && item >= 0 && item <= 24 * 60 ? item : null;
+    if (typeof item !== "string") return null;
+    const value = item.trim().toLowerCase();
+    const iso = value.match(/^pt(?:(\d+(?:\.\d+)?)h)?(?:(\d+(?:\.\d+)?)m)?$/);
+    if (iso) {
+      const minutes = Number(iso[1] ?? 0) * 60 + Number(iso[2] ?? 0);
+      return Number.isInteger(minutes) && minutes <= 24 * 60 ? minutes : null;
+    }
+    const hours = value.match(/(\d+(?:[.,]\d+)?)\s*(?:h|heure|heures)/)?.[1];
+    const minutes = value.match(/(\d+)\s*(?:m|min|minute|minutes)/)?.[1];
+    if (!hours && !minutes) return null;
+    const total = Math.round(Number((hours ?? "0").replace(",", ".")) * 60) + Number(minutes ?? 0);
+    return Number.isInteger(total) && total <= 24 * 60 ? total : null;
+  };
+  const prepTimeMinutes = optionalMinutes(recipe.prepTimeMinutes);
+  const cookTimeMinutes = optionalMinutes(recipe.cookTimeMinutes);
+  const servings = typeof recipe.servings === "number" && Number.isInteger(recipe.servings) && recipe.servings > 0 ? recipe.servings : null;
+  return title && ingredients.length && steps.length ? { title, ingredients, steps, prepTimeMinutes, cookTimeMinutes, servings } : null;
 }
 
 export function errorResponse(message: string, status: number) {

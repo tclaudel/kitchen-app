@@ -38,7 +38,7 @@ export default function ImportRecipePage() {
     data.append("image", file);
     fetch("/api/recipes/ocr", { method: "POST", body: data })
       .then(async (response) => {
-        const payload = await response.json() as { error?: string; title?: string; ingredients?: string[]; steps?: string[] };
+         const payload = await response.json() as { error?: string; title?: string; ingredients?: string[]; steps?: string[]; prepTimeMinutes?: number | null; cookTimeMinutes?: number | null; servings?: number | null };
         if (!response.ok) throw new Error(payload.error ?? "L'extraction a échoué.");
         sessionStorage.setItem("recipe-draft", JSON.stringify(payload));
         router.push("/recipes/import/review");
@@ -93,7 +93,7 @@ function TextImport({ text, setText }: { text: string; setText: (value: string) 
     setError("");
     try {
       const response = await fetch("/api/recipes/parse-text", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
-      const payload = await response.json() as { error?: string; title?: string; ingredients?: string[]; steps?: string[] };
+       const payload = await response.json() as { error?: string; title?: string; ingredients?: string[]; steps?: string[]; prepTimeMinutes?: number | null; cookTimeMinutes?: number | null; servings?: number | null };
       if (!response.ok) throw new Error(payload.error ?? "Le texte n'a pas pu être structuré.");
       sessionStorage.setItem("recipe-draft", JSON.stringify(payload));
       router.push("/recipes/import/review");
@@ -122,7 +122,7 @@ function UrlImport({ url, setUrl }: { url: string; setUrl: (value: string) => vo
     setError("");
     try {
       const response = await fetch("/api/recipes/import-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
-      const payload = await response.json() as { error?: string; title?: string; ingredients?: string[]; steps?: string[] };
+       const payload = await response.json() as { error?: string; title?: string; ingredients?: string[]; steps?: string[]; prepTimeMinutes?: number | null; cookTimeMinutes?: number | null; servings?: number | null };
       if (!response.ok) throw new Error(payload.error ?? "L'URL n'a pas pu être importée.");
       sessionStorage.setItem("recipe-draft", JSON.stringify(payload));
       router.push("/recipes/import/review");

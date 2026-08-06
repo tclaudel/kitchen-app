@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse, jsonBody, rateLimit, safeRecipe, securityHeaders, text } from "@/lib/api-security";
 
 export const runtime = "nodejs";
 
@@ -36,20 +37,34 @@ function toDraft(recipe: Record<string, unknown>): RecipeDraft | null {
   return title && ingredients.length && instructions.length ? { title, ingredients, steps: instructions } : null;
 }
 
-export async function POST(request: Request) {
-  const { url } = await request.json() as { url?: string };
-  let parsedUrl: URL;
-  try { parsedUrl = new URL(url ?? ""); } catch { return NextResponse.json({ error: "Veuillez fournir une URL valide." }, { status: 400 }); }
-  if (!/^https?:$/.test(parsedUrl.protocol)) return NextResponse.json({ error: "Seules les URLs HTTP et HTTPS sont acceptées." }, { status: 400 });
+function isPublicUrl(url: URL) {
+  const host = url.hostname.toLowerCase();
+  return !(
+    host === "localhost" || host.endsWith(".localhost") || host === "127.0.0.1" ||
+    host === "::1" || host.startsWith("10.") || host.startsWith("192.168.") ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) || host === "169.254.169.254"
+  );
+}
 
-  const response = await fetch(parsedUrl, { headers: { "User-Agent": "Recettes-en-famille/1.0 recipe importer" } }).catch(() => null);
-  if (!response?.ok) return NextResponse.json({ error: "La page n'a pas pu être consultée." }, { status: 502 });
-  const html = await response.text();
+export async function POST(request: Request) {
+  const limited = rateLimit(request);
+  if (limited) return limited;
+  const body = await jsonBody(request);
+  const url = text(body?.url, 2_000);
+  let parsedUrl: URL;
+  try { parsedUrl = new URL(url); } catch { return errorResponse("Veuillez fournir une URL valide.", 400); }
+  if (!/^https?:$/.test(parsedUrl.protocol) || !isPublicUrl(parsedUrl)) return errorResponse("Cette URL n'est pas autorisée.", 400);
+
+  const response = await fetch(parsedUrl, { headers: { "User-Agent": "Recettes-en-famille/1.0 recipe importer", Accept: "text/html" }, signal: AbortSignal.timeout(10_000), redirect: "error" }).catch(() => null);
+  if (!response?.ok) return errorResponse("La page n'a pas pu être consultée.", 502);
+  const contentLength = Number(response.headers.get("content-length") ?? 0);
+  if (contentLength > 2_000_000) return errorResponse("La page est trop volumineuse.", 413);
+  const html = (await response.text()).slice(0, 2_000_000);
   const scripts = [...html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
   for (const match of scripts) {
     try {
       const draft = toDraft(findRecipeSchema(JSON.parse(match[1])) ?? {});
-      if (draft) return NextResponse.json(draft);
+      if (draft) return securityHeaders(NextResponse.json(draft));
     } catch { /* Try the next JSON-LD block. */ }
   }
 
@@ -57,18 +72,19 @@ export async function POST(request: Request) {
   const password = process.env.OPENCODE_SERVER_PASSWORD;
   const configuredModel = process.env.OPENCODE_MODEL ?? "opencode-go/kimi-k2.6";
   const [providerID, modelID] = configuredModel.split("/", 2);
-  if (!password) return NextResponse.json({ error: "Aucune recette structurée trouvée et OpenCode n'est pas configuré pour analyser cette page." }, { status: 422 });
+  if (!password) return errorResponse("Aucune recette structurée trouvée et OpenCode n'est pas configuré pour analyser cette page.", 422);
   const auth = `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}`;
   const session = await fetch(`${serverUrl}/session`, { method: "POST", headers: { Authorization: auth, "Content-Type": "application/json" }, body: JSON.stringify({ title: "Recipe URL import" }) });
-  if (!session.ok) return NextResponse.json({ error: "OpenCode n'a pas pu démarrer l'import." }, { status: 502 });
+  if (!session.ok) return errorResponse("OpenCode n'a pas pu démarrer l'import.", 502);
   const { id } = await session.json() as { id: string };
   const message = await fetch(`${serverUrl}/session/${id}/message`, { method: "POST", headers: { Authorization: auth, "Content-Type": "application/json" }, body: JSON.stringify({ model: { providerID, modelID }, parts: [{ type: "text", text: `Extract this recipe page. Return only JSON with title, ingredients array, and steps array. Never invent missing information. URL: ${parsedUrl}\n\n${html.slice(0, 120000)}` }] }) });
-  if (!message.ok) return NextResponse.json({ error: "OpenCode n'a pas pu extraire la recette de cette page." }, { status: 502 });
+  if (!message.ok) return errorResponse("OpenCode n'a pas pu extraire la recette de cette page.", 502);
   const payload = await message.json() as { parts?: Array<{ type?: string; text?: string }> };
   try {
     const content = payload.parts?.find((part) => part.type === "text")?.text ?? "";
-    const draft = JSON.parse(content.match(/\{[\s\S]*\}/)?.[0] ?? content) as RecipeDraft;
-    if (!draft.title || !draft.ingredients?.length || !draft.steps?.length) throw new Error("Incomplete");
-    return NextResponse.json(draft);
-  } catch { return NextResponse.json({ error: "La page ne contient pas de recette exploitable." }, { status: 422 }); }
+     const draft = JSON.parse(content.match(/\{[\s\S]*\}/)?.[0] ?? content) as RecipeDraft;
+     const safe = safeRecipe(draft);
+     if (!safe) throw new Error("Incomplete");
+     return securityHeaders(NextResponse.json(safe));
+   } catch { return errorResponse("La page ne contient pas de recette exploitable.", 422); }
 }

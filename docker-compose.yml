@@ -1,4 +1,14 @@
 services:
+  migrate:
+    image: node:22-bookworm-slim
+    working_dir: /app
+    volumes:
+      - ./app:/app
+      - ./data:/data
+    environment:
+      DATABASE_URL: file:/data/kitchen.db
+    command: sh -c "apt-get update -qq && apt-get install -y -qq openssl >/dev/null && npm install --silent prisma@7.9.1 dotenv && npx prisma migrate deploy"
+
   opencode:
     build:
       context: ./opencode
@@ -29,4 +39,7 @@ services:
       - ./data:/data
       - ./uploads:/app/uploads
     depends_on:
-      - opencode
+      migrate:
+        condition: service_completed_successfully
+      opencode:
+        condition: service_started

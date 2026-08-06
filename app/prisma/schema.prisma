@@ -27,6 +27,7 @@ model Recipe {
   sourceType        String   @default("photo")
   createdAt         DateTime @default(now())
   incidentReports   IncidentReport[]
+  revisions         RecipeRevision[]
 
   @@index([title])
 }
@@ -39,4 +40,21 @@ model IncidentReport {
   recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
   @@index([recipeId])
+}
+
+model RecipeRevision {
+  id              String   @id @default(cuid())
+  recipeId        String
+  modifiedBy      String
+  title           String
+  ingredients     String
+  steps           String
+  cooklang        String?
+  prepTimeMinutes Int?
+  cookTimeMinutes Int?
+  servings        Int?
+  createdAt       DateTime @default(now())
+  recipe          Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId, createdAt])
 }

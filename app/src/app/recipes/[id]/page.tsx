@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { deleteRecipe } from "./actions";
+import { DeleteRecipeButton } from "./DeleteRecipeButton";
 
 function parseList(value: string) {
   try {
@@ -73,15 +74,16 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
             </section>
           </div>
 
-          <div className="border-t border-[#eeeae2] px-6 py-5 sm:px-10">
-            <form action={deleteRecipe} onSubmit={(event) => { if (!window.confirm("Supprimer cette recette ?")) event.preventDefault(); }}>
-              <input type="hidden" name="id" value={recipe.id} />
-              <button type="submit" className="rounded-full border border-[#e2b8aa] px-4 py-2 text-sm font-medium text-[#a44f39] transition hover:bg-[#fff0eb]">Supprimer la recette</button>
-            </form>
+          <div className="flex flex-col gap-4 border-t border-[#eeeae2] px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-10">
+            <div className="flex flex-wrap items-center gap-2">
+              <Link href={`/recipes/${recipe.id}/edit`} className="inline-flex min-h-10 items-center rounded-full border border-[#d8d5cb] px-4 py-2 text-sm font-medium text-[#526157] transition hover:border-[#b8c0b5] hover:bg-[#f8f5ef]">Modifier</Link>
+              <Link href={`/recipes/${recipe.id}/history`} className="inline-flex min-h-10 items-center rounded-full border border-[#d8d5cb] px-4 py-2 text-sm font-medium text-[#526157] transition hover:border-[#b8c0b5] hover:bg-[#f8f5ef]">Historique</Link>
+            </div>
+            <DeleteRecipeButton id={recipe.id} />
           </div>
           {recipe.cooklang && <details className="border-t border-[#eeeae2] px-6 py-5 sm:px-10">
-            <summary className="cursor-pointer text-sm font-semibold text-[#526157]">Voir le format Cooklang</summary>
-            <pre className="mt-4 overflow-x-auto rounded-xl bg-[#27352d] p-4 text-sm leading-6 text-white">{recipe.cooklang}</pre>
+            <summary className="inline-flex cursor-pointer rounded-full border border-[#d8d5cb] px-4 py-2 text-sm font-medium text-[#526157] transition hover:bg-[#f8f5ef]">Voir brut</summary>
+            <pre className="mt-4 overflow-x-auto rounded-xl bg-[#27352d] p-4 text-sm leading-6 text-white" aria-label="Recette au format Cooklang">{recipe.cooklang}</pre>
           </details>}
         </div>
       </article>

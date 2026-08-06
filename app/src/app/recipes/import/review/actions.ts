@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { randomUUID } from "node:crypto";
+import { smartCooklang } from "@/lib/cooklang";
 
 export async function saveRecipe(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
@@ -19,22 +20,7 @@ export async function saveRecipe(formData: FormData) {
 
   if (!title || ingredients.length === 0 || steps.length === 0) return;
 
-  const cooklang = [
-    `---`,
-    `servings: ${servings ?? 1}`,
-    `---`,
-    ``,
-    `# ${title}`,
-    ``,
-    ...steps.map((step) => {
-      let result = step;
-      for (const ingredient of ingredients) {
-        const escaped = ingredient.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        result = result.replace(new RegExp(escaped, "i"), `@${ingredient}`);
-      }
-      return result;
-    }),
-  ].join("\\n");
+  const cooklang = await smartCooklang({ title, ingredients, steps, prepTimeMinutes, cookTimeMinutes, servings });
 
   const recipe = await prisma.recipe.create({
     data: {
